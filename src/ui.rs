@@ -348,9 +348,7 @@ impl App {
             let result = if current_watching {
                 match self.jira_client.unwatch_issue(&issue_key).await {
                     Ok(_) => {
-                        if let Some(ref mut issue) = self.selected_issue {
-                            issue.is_watching = Some(false);
-                        }
+                        self.set_watch_status(&issue_key, false);
                         format!("Stopped watching {}", issue_key)
                     }
                     Err(e) => format!("Failed to unwatch {}: {}", issue_key, e),
@@ -358,9 +356,7 @@ impl App {
             } else {
                 match self.jira_client.watch_issue(&issue_key).await {
                     Ok(_) => {
-                        if let Some(ref mut issue) = self.selected_issue {
-                            issue.is_watching = Some(true);
-                        }
+                        self.set_watch_status(&issue_key, true);
                         format!("Now watching {}", issue_key)
                     }
                     Err(e) => format!("Failed to watch {}: {}", issue_key, e),
@@ -370,6 +366,20 @@ impl App {
             Ok(result)
         } else {
             Err(anyhow::anyhow!("No issue selected"))
+        }
+    }
+
+    // Update is_watching in selected_issue and both source lists atomically.
+    fn set_watch_status(&mut self, issue_key: &str, watching: bool) {
+        if let Some(ref mut issue) = self.selected_issue {
+            if issue.key == issue_key {
+                issue.is_watching = Some(watching);
+            }
+        }
+        for issue in self.recent_issues.iter_mut().chain(self.assigned_issues.iter_mut()) {
+            if issue.key == issue_key {
+                issue.is_watching = Some(watching);
+            }
         }
     }
 
@@ -699,6 +709,18 @@ fn render_recent_issues(f: &mut Frame, app: &mut App, area: ratatui::layout::Rec
                     Span::raw(" | "),
                     Span::styled("Assignee: ", Style::default().fg(Color::Gray)),
                     Span::raw(issue.assignee.as_deref().unwrap_or("Unassigned")),
+                    Span::raw(" | "),
+                    Span::styled(
+                        match issue.is_watching {
+                            Some(true) => "👁 Watching",
+                            Some(false) => "○ Not watching",
+                            None => "○",
+                        },
+                        Style::default().fg(match issue.is_watching {
+                            Some(true) => Color::Cyan,
+                            _ => Color::DarkGray,
+                        }),
+                    ),
                 ]),
                 Line::from(vec![
                     Span::styled("─".repeat(80), Style::default().fg(Color::DarkGray)),

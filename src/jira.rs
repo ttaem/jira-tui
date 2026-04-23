@@ -78,6 +78,13 @@ struct JiraFields {
     reporter: JiraUser,
     created: String,
     updated: String,
+    watches: Option<JiraWatches>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct JiraWatches {
+    #[serde(rename = "isWatching")]
+    is_watching: bool,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -251,7 +258,7 @@ impl JiraClient {
         let mut params = HashMap::new();
         params.insert("jql", jql);
         params.insert("maxResults", "50");
-        params.insert("fields", "summary,description,status,priority,assignee,reporter,created,updated");
+        params.insert("fields", "summary,description,status,priority,assignee,reporter,created,updated,watches");
 
         let response = self
             .client
@@ -267,7 +274,7 @@ impl JiraClient {
         }
 
         let api_response: JiraApiResponse = response.json().await?;
-        
+
         let issues = api_response
             .issues
             .into_iter()
@@ -303,9 +310,9 @@ impl JiraClient {
                     reporter: issue.fields.reporter.display_name,
                     created: issue.fields.created,
                     updated: issue.fields.updated,
-                    is_watching: None, // Will be loaded separately if needed
-                    changelog: None,   // Will be loaded separately if needed
-                    comments: None,    // Will be loaded separately if needed
+                    is_watching: issue.fields.watches.map(|w| w.is_watching),
+                    changelog: None,
+                    comments: None,
                 }
             })
             .collect();
