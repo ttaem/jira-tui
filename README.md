@@ -49,18 +49,15 @@ cargo build --release
 
 ### 2. Setup Configuration
 
-**Option A: Environment Variables**
-```bash
-export JIRA_EMAIL="your.email@newracom.com"
-export JIRA_API_TOKEN="your-api-token-here"
-export JIRA_BASE_URL="https://newracom.atlassian.net"  # optional
+On first run, the app creates a template config file at `~/.config/jira-tui/config.toml`:
+
+```toml
+email = "your.email@newracom.com"
+api_token = "your-api-token-here"
+# base_url = "https://newracom.atlassian.net"
 ```
 
-**Option B: .env File**
-```bash
-cp env.example .env
-# Edit .env with your credentials
-```
+Edit the file with your credentials, then run again.
 
 ### 3. Create JIRA API Token
 
@@ -122,25 +119,21 @@ Press `Enter` or `Space` on any issue to view:
 
 ## Configuration
 
-### Environment Variables
+Edit `~/.config/jira-tui/config.toml` (auto-created on first run):
 
-| Variable | Required | Default | Description |
-|----------|----------|---------|-------------|
-| `JIRA_EMAIL` | ✅ Yes | - | Your JIRA account email |
-| `JIRA_API_TOKEN` | ✅ Yes | - | Your JIRA API token |
-| `JIRA_BASE_URL` | ❌ No | `https://newracom.atlassian.net` | JIRA instance URL |
-
-### .env File Support
-
-Create a `.env` file in the project root:
-
-```bash
-export JIRA_EMAIL="your.email@newracom.com"
-export JIRA_API_TOKEN="your-api-token-here"
-export JIRA_BASE_URL="https://newracom.atlassian.net"
+```toml
+email = "your.email@newracom.com"
+api_token = "your-api-token-here"
+# base_url = "https://newracom.atlassian.net"  # optional
 ```
 
-The application will automatically load this file if it exists.
+### Config Fields
+
+| Field | Required | Default | Description |
+|-------|----------|---------|-------------|
+| `email` | ✅ Yes | — | Your JIRA account email |
+| `api_token` | ✅ Yes | — | Your JIRA API token |
+| `base_url` | ❌ No | `https://newracom.atlassian.net` | JIRA instance URL |
 
 ## Troubleshooting
 
@@ -164,10 +157,10 @@ The application will automatically load this file if it exists.
 ### Common Error Messages
 
 **"JIRA_EMAIL environment variable is required"**
-- Set the `JIRA_EMAIL` environment variable or create a `.env` file
+- Edit `~/.config/jira-tui/config.toml` with your email and API token
 
 **"JIRA_API_TOKEN environment variable is required"**
-- Set the `JIRA_API_TOKEN` environment variable with a valid API token
+- Edit `~/.config/jira-tui/config.toml` with a valid API token
 
 **"API request failed: 401"**
 - Invalid credentials, check your email and API token

@@ -758,11 +758,11 @@ pub async fn run_app_with_config(config: Config) -> Result<()> {
 
     // Create app and run
     let jira_client = JiraClient::new(
-        config.jira_base_url.clone(),
-        config.jira_email.clone(),
-        config.jira_api_token.clone(),
+        config.base_url.clone(),
+        config.email.clone(),
+        config.api_token.clone(),
     );
-    let mut app = App::new(jira_client, config.jira_base_url.clone());
+    let mut app = App::new(jira_client, config.base_url.clone());
     
     // Load initial data
     app.load_issues().await?;

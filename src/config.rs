@@ -1,48 +1,53 @@
-use anyhow::Result;
-use serde::{Deserialize, Serialize};
+use anyhow::{Context, Result};
+use serde::Deserialize;
 use std::env;
 use std::fs;
-use std::path::Path;
+use std::path::PathBuf;
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Deserialize)]
 pub struct Config {
-    pub jira_email: String,
-    pub jira_api_token: String,
-    pub jira_base_url: String,
+    pub email: String,
+    pub api_token: String,
+    #[serde(default = "default_base_url")]
+    pub base_url: String,
+}
+
+fn default_base_url() -> String {
+    "https://newracom.atlassian.net".to_string()
 }
 
 impl Config {
+    pub fn config_path() -> Result<PathBuf> {
+        let home = env::var("HOME")
+            .or_else(|_| env::var("USERPROFILE"))
+            .context("Cannot determine home directory ($HOME is not set)")?;
+        Ok(PathBuf::from(home)
+            .join(".config")
+            .join("jira-tui")
+            .join("config.toml"))
+    }
+
     pub fn load() -> Result<Self> {
-        // Try to load from .env file first
-        if Path::new(".env").exists() {
-            if let Ok(content) = fs::read_to_string(".env") {
-                for line in content.lines() {
-                    if line.trim().is_empty() || line.trim().starts_with('#') {
-                        continue;
-                    }
-                    if let Some((key, value)) = line.split_once('=') {
-                        let key = key.trim().trim_start_matches("export ");
-                        let value = value.trim().trim_matches('"');
-                        env::set_var(key, value);
-                    }
-                }
+        let path = Self::config_path()?;
+
+        if !path.exists() {
+            if let Some(dir) = path.parent() {
+                fs::create_dir_all(dir)?;
             }
+            let template = "email = \"your.email@newracom.com\"\n\
+                            api_token = \"your-api-token-here\"\n\
+                            # base_url = \"https://newracom.atlassian.net\"\n";
+            fs::write(&path, template)?;
+            return Err(anyhow::anyhow!(
+                "Config file created at {}\nEdit it with your credentials and run again.\nGet an API token at: https://id.atlassian.com/manage-profile/security/api-tokens",
+                path.display()
+            ));
         }
 
-        // Get from environment variables
-        let jira_email = env::var("JIRA_EMAIL")
-            .map_err(|_| anyhow::anyhow!("JIRA_EMAIL environment variable is required"))?;
-        
-        let jira_api_token = env::var("JIRA_API_TOKEN")
-            .map_err(|_| anyhow::anyhow!("JIRA_API_TOKEN environment variable is required"))?;
-        
-        let jira_base_url = env::var("JIRA_BASE_URL")
-            .unwrap_or_else(|_| "https://newracom.atlassian.net".to_string());
+        let content = fs::read_to_string(&path)
+            .with_context(|| format!("Failed to read {}", path.display()))?;
 
-        Ok(Config {
-            jira_email,
-            jira_api_token,
-            jira_base_url,
-        })
+        toml::from_str(&content)
+            .with_context(|| format!("Failed to parse {}", path.display()))
     }
 }
