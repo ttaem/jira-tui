@@ -69,6 +69,7 @@ pub struct App {
     done_list_state: ListState,
     selected_issue: Option<JiraIssue>,
     show_details: bool,
+    detail_scroll: u16,
     loading: bool,
     error_message: Option<String>,
 }
@@ -104,6 +105,7 @@ impl App {
             done_list_state,
             selected_issue: None,
             show_details: false,
+            detail_scroll: 0,
             loading: false,
             error_message: None,
         }
@@ -269,6 +271,7 @@ impl App {
             if let Some(issue) = issues.get(i) {
                 self.selected_issue = Some((*issue).clone());
                 self.show_details = true;
+                self.detail_scroll = 0;
             }
         }
     }
@@ -289,9 +292,22 @@ impl App {
                 KeyCode::Esc | KeyCode::Char('q') => {
                     self.show_details = false;
                     self.selected_issue = None;
+                    self.detail_scroll = 0;
+                }
+                KeyCode::Down | KeyCode::Char('j') => {
+                    self.detail_scroll = self.detail_scroll.saturating_add(1);
+                }
+                KeyCode::Up | KeyCode::Char('k') => {
+                    self.detail_scroll = self.detail_scroll.saturating_sub(1);
+                }
+                KeyCode::PageDown => {
+                    self.detail_scroll = self.detail_scroll.saturating_add(10);
+                }
+                KeyCode::PageUp => {
+                    self.detail_scroll = self.detail_scroll.saturating_sub(10);
                 }
                 KeyCode::Char('w') => {
-                    // Toggle watch status - will be handled in main loop
+                    // Toggle watch status - handled in main loop
                     return false;
                 }
                 _ => {}
@@ -533,9 +549,11 @@ pub fn ui(f: &mut Frame, app: &mut App) {
                 comments_text
             );
 
+            let scroll = app.detail_scroll;
             let details = Paragraph::new(details_text)
-                .block(Block::default().borders(Borders::ALL).title("Issue Details"))
+                .block(Block::default().borders(Borders::ALL).title("Issue Details (↑/↓ or j/k: scroll, PgUp/PgDn: fast scroll)"))
                 .wrap(Wrap { trim: true })
+                .scroll((scroll, 0))
                 .style(Style::default().fg(Color::White).bg(Color::Black));
 
             f.render_widget(details, popup_area);
@@ -549,7 +567,7 @@ pub fn ui(f: &mut Frame, app: &mut App) {
         .split(f.size());
 
     let help_text = if app.show_details {
-        "Press 'Esc' or 'q' to close details | 'w' to toggle watch | Copy the URL to open in your browser"
+        "↑/k: Scroll up | ↓/j: Scroll down | PgUp/PgDn: Fast scroll | 'w': Toggle watch | Esc/q: Close"
     } else {
         match app.current_tab {
             Tab::Assigned => "↑/k: Up | ↓/j: Down | ←/h: Left | →/l: Right | Enter/Space: Details | Tab: Switch tabs | r: Refresh | q: Quit",
